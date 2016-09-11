@@ -39,8 +39,9 @@ class Submission(db.Document):
 
     def validate(self, clean=True):
         # TODO: Not keen on doing this db lookup on each save.
+        print "study", self.study.id
         if Submission.objects.filter(
-                study=self.study).count() > (self.study.available_places - 1):
+                study=self.study).count() >= self.study.available_places:
             raise ValidationError(
                 "A maximum of {study.available_places} submissions allowed for"
                 " the {study.name}".format(study=self.study))
