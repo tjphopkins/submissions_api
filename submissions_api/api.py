@@ -22,7 +22,6 @@ def _study_conversion_to_dict(study):
 
 
 def _get_studies(user=None):
-    from submissions_api.documents import Study # avoid circular import
     if user:
         studies = Study.objects.filter(user=user)
     else:
@@ -90,39 +89,56 @@ def _submission_conversion_to_dict(submission):
     }
 
 
-@app.route('/submissions', methods=['POST'])
+def _get_submissions_by_user(user):
+    submissions = Submission.objects.filter(user=user)
+    return [_submission_conversion_to_dict(submission) for
+            submission in submissions]
+
+
+@app.route('/submissions', methods=['GET', 'POST'])
 def submissions():
-    study_id = request.form.get('study')
-    user = request.form.get('user')
+    if request.method == 'POST':
+        study_id = request.form.get('study')
+        user = request.form.get('user')
 
-    success = True
-    if not study_id or not isinstance(study_id, unicode):
-        success = False
-        invalid_param = "study_id"
-        invalid_value = study_id
-    elif not user or not isinstance(user, unicode):
-        success = False
-        invalid_param = "user"
-        invalid_value = user
+        success = True
+        if not study_id or not isinstance(study_id, unicode):
+            success = False
+            invalid_param = "study_id"
+            invalid_value = study_id
+        elif not user or not isinstance(user, unicode):
+            success = False
+            invalid_param = "user"
+            invalid_value = user
 
-    if not success:
+        if not success:
+            return json.dumps({
+                'success': False,
+                'message':
+                "{value} is an invalid value for the parameter {param}".format(
+                    value=invalid_value, param=invalid_param)
+            })
+
+        try:
+            study = Study.objects.get(id=ObjectId(study_id))
+            submission = Submission(study=study, user=user).save()
+        except (NotUniqueError, ValidationError) as e:
+            return json.dumps({
+                'success': False,
+                'message': str(e)
+            })
+        else:
+            return json.dumps({
+                'success': True,
+                'submission': _submission_conversion_to_dict(submission)
+            })
+
+    user = request.args.get('user')
+    if not user:
         return json.dumps({
             'success': False,
-            'message':
-            "{value} is an invalid value for the parameter {param}".format(
-                value=invalid_value, param=invalid_param)
+            'message': "Must supply value user_id"
         })
+    studies = _get_submissions_by_user(user)
 
-    try:
-        study = Study.objects.get(id=ObjectId(study_id))
-        submission = Submission(study=study, user=user).save()
-    except (NotUniqueError, ValidationError) as e:
-        return json.dumps({
-            'success': False,
-            'message': str(e)
-        })
-    else:
-        return json.dumps({
-            'success': True,
-            'submission': _submission_conversion_to_dict(submission)
-        })
+    return json.dumps(studies)

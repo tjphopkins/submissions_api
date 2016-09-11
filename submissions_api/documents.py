@@ -33,6 +33,10 @@ class Submission(db.Document):
             {
                 'fields': ['study', 'user'],
                 'unique': True
+            },
+            {
+                'fields': ['user'],
+                'unique': False
             }
         ]
     }

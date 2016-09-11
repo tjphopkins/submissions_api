@@ -15,5 +15,5 @@ app.config.update(
 if __name__ == '__main__':
     app.run(debug=True)
 
-# VIEWS #
+
 import submissions_api.api
