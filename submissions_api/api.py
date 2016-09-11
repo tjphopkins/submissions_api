@@ -126,5 +126,3 @@ def submissions():
             'success': True,
             'submission': _submission_conversion_to_dict(submission)
         })
-
-    return
