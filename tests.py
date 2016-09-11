@@ -2,7 +2,7 @@
 
 import unittest
 from mock import patch
-from mongoengine import NotUniqueError
+from mongoengine import NotUniqueError, ValidationError
 from datetime import datetime
 
 from submissions_api import app
@@ -23,9 +23,6 @@ class SubmissionsTestCase(unittest.TestCase):
         # /understanding-contexts-in-flask.html)
         self.app_context = app.app_context()
         self.app_context.push()
-        # If we want to access the request object we can set the request
-        # context on the fly like so:
-        #   with app.test_request_context('/?name=Peter'):
 
         self.study = Study(
             name='Study 1', available_places=2, user='user_1').save()
@@ -60,6 +57,16 @@ class SubmissionsTestCase(unittest.TestCase):
         Submission(study=self.study, user='user_2').save()
         with self.assertRaises(NotUniqueError):
             Submission(study=self.study, user='user_2').save()
+
+    def test_no_more_than_available_places_submissions(self):
+        Submission(study=self.study, user='user_2').save()
+        Submission(study=self.study, user='user_3').save()
+        with self.assertRaises(ValidationError) as e:
+            Submission(study=self.study, user='user_4').save()
+
+        self.assertEqual(
+            str(e.exception),
+            "A maximum of 2 submissions allowed for the Study 1")
 
 
 if __name__ == '__main__':

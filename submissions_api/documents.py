@@ -1,4 +1,5 @@
 from datetime import datetime
+from mongoengine import ValidationError
 
 from submissions_api import db
 
@@ -35,3 +36,13 @@ class Submission(db.Document):
             }
         ]
     }
+
+    def validate(self, clean=True):
+        # TODO: Not keen on doing this db lookup on each save.
+        if Submission.objects.filter(
+                study=self.study).count() > (self.study.available_places - 1):
+            raise ValidationError(
+                "A maximum of {study.available_places} submissions allowed for"
+                " the {study.name}".format(study=self.study))
+
+        super(Submission, self).validate()
