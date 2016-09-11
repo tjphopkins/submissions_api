@@ -21,9 +21,12 @@ def _study_conversion_to_dict(study):
     }
 
 
-def _get_all_studies():
+def _get_studies(user=None):
     from submissions_api.documents import Study # avoid circular import
-    studies = Study.objects.all()
+    if user:
+        studies = Study.objects.filter(user=user)
+    else:
+        studies = Study.objects.all()
     return [_study_conversion_to_dict(study) for study in studies]
 
 
@@ -71,7 +74,10 @@ def studies():
                 'study': _study_conversion_to_dict(study)
             })
 
-    studies = _get_all_studies()
+    user = request.args.get('user')
+    # TODO: Some validation around user_id
+    studies = _get_studies(user=user)
+
     return json.dumps(studies)
 
 
