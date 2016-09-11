@@ -1,4 +1,4 @@
-def _study_conversion_to_dict(study):
+def study_conversion_to_dict(study):
     return {
         'id': str(study.id),
         'name': study.name,
@@ -9,4 +9,4 @@ def _study_conversion_to_dict(study):
 def get_all_studies():
     from submissions_api.documents import Study # avoid circular import
     studies = Study.objects.all()
-    return [_study_conversion_to_dict(study) for study in studies]
+    return [study_conversion_to_dict(study) for study in studies]
