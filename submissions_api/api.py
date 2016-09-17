@@ -37,49 +37,43 @@ def _get_studies(user=None):
     return [_study_conversion_to_dict(study) for study in studies]
 
 
-def _unicode_param_validation(param_val):
-    return not param_val or not isinstance(param_val, unicode)
+def _get_and_validate_unicode_param(param_name):
+    param_val = request.form.get(param_name)
+    valid = param_val and isinstance(param_val, unicode)
+    return valid, param_val, param_name
 
 
 def _studies_post():
-    study_name = request.form.get('name')
-    available_places = request.form.get('available_places')
-    user = request.form.get('user')
+    params_to_validate = ['name', 'available_places', 'user']
+    validation_results = [
+        _get_and_validate_unicode_param(param) for param in params_to_validate]
+    param_map = {}
+    for result in validation_results:
+        valid, param_val, param_name = result
+        if not valid:
+            return {
+                'success': False,
+                'message':
+                "{value} is an invalid value for the parameter {param}".format(
+                    value=param_val, param=param_name)
+            }
+        param_map[param_name] = param_val
 
-    success = True
-    if _unicode_param_validation(study_name):
-        success = False
-        invalid_param = "name"
-        invalid_value = study_name
-    elif _unicode_param_validation(available_places):
-        success = False
-        invalid_param = "available_places"
-        invalid_value = available_places
-    elif _unicode_param_validation(user):
-        success = False
-        invalid_param = "user"
-        invalid_value = user
-
-    if not success:
-        return {
-            'success': False,
-            'message':
-            "{value} is an invalid value for the parameter {param}".format(
-                value=invalid_value, param=invalid_param)
-        }
-
+    # Param validaiton successful
     try:
         study = Study(
-            name=study_name, available_places=int(available_places),
-            user=user).save()
+            name=param_map['study_name'],
+            available_places=int(param_map['available_places']),
+            user=param_map['user']).\
+            save()
     except (NotUniqueError, ValidationError) as e:
         return {
-            'success': False,
+            'success': 'False',
             'message': str(e)
         }
     else:
         return {
-            'success': True,
+            'success': 'True',
             'study': _study_conversion_to_dict(study)
         }
 
