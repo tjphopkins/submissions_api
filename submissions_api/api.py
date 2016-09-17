@@ -2,6 +2,7 @@ from flask import request
 import json
 from bson import ObjectId
 from mongoengine import NotUniqueError, ValidationError
+from functools import wraps
 
 from submissions_api import app
 from submissions_api.documents import Study, Submission
@@ -10,6 +11,13 @@ from submissions_api.documents import Study, Submission
 @app.route('/')
 def index():
     return "This is the index. Nothing to see here."
+
+
+def jsonify_response(fn):
+    @wraps(fn)
+    def fn_wrapper(*args, **kwargs):
+        return json.dumps(fn(*args, **kwargs))
+    return fn_wrapper
 
 
 def _study_conversion_to_dict(study):
@@ -29,52 +37,60 @@ def _get_studies(user=None):
     return [_study_conversion_to_dict(study) for study in studies]
 
 
+def _unicode_param_validation(param_val):
+    return not param_val or not isinstance(param_val, unicode)
+
+
+def _studies_post():
+    study_name = request.form.get('name')
+    available_places = request.form.get('available_places')
+    user = request.form.get('user')
+
+    success = True
+    if _unicode_param_validation(study_name):
+        success = False
+        invalid_param = "name"
+        invalid_value = study_name
+    elif _unicode_param_validation(available_places):
+        success = False
+        invalid_param = "available_places"
+        invalid_value = available_places
+    elif _unicode_param_validation(user):
+        success = False
+        invalid_param = "user"
+        invalid_value = user
+
+    if not success:
+        return {
+            'success': False,
+            'message':
+            "{value} is an invalid value for the parameter {param}".format(
+                value=invalid_value, param=invalid_param)
+        }
+
+    try:
+        study = Study(
+            name=study_name, available_places=int(available_places),
+            user=user).save()
+    except (NotUniqueError, ValidationError) as e:
+        return {
+            'success': False,
+            'message': str(e)
+        }
+    else:
+        return {
+            'success': True,
+            'study': _study_conversion_to_dict(study)
+        }
+
+
 @app.route('/studies', methods=['GET', 'POST'])
+@jsonify_response
 def studies():
     if request.method == 'POST':
-        name = request.form.get('name')
-        available_places = request.form.get('available_places')
-        user = request.form.get('user')
-
-        success = True
-        if not name or not isinstance(name, unicode):
-            success = False
-            invalid_param = "name"
-            invalid_value = name
-        elif not available_places or not isinstance(available_places, unicode):
-            success = False
-            invalid_param = "available_places"
-            invalid_value = available_places
-        elif not user or not isinstance(user, unicode):
-            success = False
-            invalid_param = "user"
-            invalid_value = user
-
-        if not success:
-            return json.dumps({
-                'success': False,
-                'message':
-                "{value} is an invalid value for the parameter {param}".format(
-                    value=invalid_value, param=invalid_param)
-            })
-
-        try:
-            study = Study(
-                name=name, available_places=int(available_places),
-                user=user).save()
-        except (NotUniqueError, ValidationError) as e:
-            return json.dumps({
-                'success': False,
-                'message': str(e)
-            })
-        else:
-            return json.dumps({
-                'success': True,
-                'study': _study_conversion_to_dict(study)
-            })
+        return _studies_post()
 
     user = request.args.get('user')
-    # TODO: Some validation around user_id
     studies = _get_studies(user=user)
 
     return json.dumps(studies)
@@ -96,6 +112,7 @@ def _get_submissions_by_user(user):
 
 
 @app.route('/submissions', methods=['GET', 'POST'])
+@jsonify_response
 def submissions():
     if request.method == 'POST':
         study_id = request.form.get('study')
@@ -141,4 +158,4 @@ def submissions():
         })
     studies = _get_submissions_by_user(user)
 
-    return json.dumps(studies)
+    return studies
