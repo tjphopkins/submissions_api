@@ -105,44 +105,48 @@ def _get_submissions_by_user(user):
             submission in submissions]
 
 
+def _submissions_post():
+    study_id = request.form.get('study')
+    user = request.form.get('user')
+
+    success = True
+    if not study_id or not isinstance(study_id, unicode):
+        success = False
+        invalid_param = "study_id"
+        invalid_value = study_id
+    elif not user or not isinstance(user, unicode):
+        success = False
+        invalid_param = "user"
+        invalid_value = user
+
+    if not success:
+        return {
+            'success': False,
+            'message':
+            "{value} is an invalid value for the parameter {param}".format(
+                value=invalid_value, param=invalid_param)
+        }
+
+    try:
+        study = Study.objects.get(id=ObjectId(study_id))
+        submission = Submission(study=study, user=user).save()
+    except (NotUniqueError, ValidationError) as e:
+        return {
+            'success': False,
+            'message': str(e)
+        }
+    else:
+        return {
+            'success': True,
+            'submission': _submission_conversion_to_dict(submission)
+        }
+
+
 @app.route('/submissions', methods=['GET', 'POST'])
 @jsonify_response
 def submissions():
     if request.method == 'POST':
-        study_id = request.form.get('study')
-        user = request.form.get('user')
-
-        success = True
-        if not study_id or not isinstance(study_id, unicode):
-            success = False
-            invalid_param = "study_id"
-            invalid_value = study_id
-        elif not user or not isinstance(user, unicode):
-            success = False
-            invalid_param = "user"
-            invalid_value = user
-
-        if not success:
-            return {
-                'success': False,
-                'message':
-                "{value} is an invalid value for the parameter {param}".format(
-                    value=invalid_value, param=invalid_param)
-            }
-
-        try:
-            study = Study.objects.get(id=ObjectId(study_id))
-            submission = Submission(study=study, user=user).save()
-        except (NotUniqueError, ValidationError) as e:
-            return {
-                'success': False,
-                'message': str(e)
-            }
-        else:
-            return {
-                'success': True,
-                'submission': _submission_conversion_to_dict(submission)
-            }
+        _submissions_post()
 
     user = request.args.get('user')
     if not user:
