@@ -37,27 +37,43 @@ def _get_studies(user=None):
     return [_study_conversion_to_dict(study) for study in studies]
 
 
-def _get_and_validate_unicode_param(param_name):
+class InvalidParam(Exception):
+    def __init__(self, param_name, param_val):
+        self.param_name = param_name
+        self.param_val = param_val
+
+    def __str__(self):
+        return "{value} is an invalid value for the parameter {param}".format(
+            value=self.param_val, param=self.param_name)
+
+
+def _get_and_validate_unicode_post_param(param_name):
     param_val = request.form.get(param_name)
     valid = param_val and isinstance(param_val, unicode)
     return valid, param_val, param_name
 
 
-def _studies_post():
-    params_to_validate = ['name', 'available_places', 'user']
-    validation_results = [
-        _get_and_validate_unicode_param(param) for param in params_to_validate]
+def _validate_post_params_or_error(param_names):
+    validation_results = [_get_and_validate_unicode_post_param(param) for param
+                          in param_names]
     param_map = {}
     for result in validation_results:
         valid, param_val, param_name = result
         if not valid:
-            return {
-                'success': False,
-                'message':
-                "{value} is an invalid value for the parameter {param}".format(
-                    value=param_val, param=param_name)
-            }
+            raise InvalidParam(param_name, param_val)
         param_map[param_name] = param_val
+    return param_map
+
+
+def _studies_post():
+    params_to_validate = ['name', 'available_places', 'user']
+    try:
+        param_map = _validate_post_params_or_error(params_to_validate)
+    except InvalidParam as e:
+        return {
+            'success': False,
+            'message': str(e)
+        }
 
     # Param validaiton successful
     try:
@@ -68,12 +84,12 @@ def _studies_post():
             save()
     except (NotUniqueError, ValidationError) as e:
         return {
-            'success': 'False',
+            'success': False,
             'message': str(e)
         }
     else:
         return {
-            'success': 'True',
+            'success': True,
             'study': _study_conversion_to_dict(study)
         }
 
@@ -106,30 +122,19 @@ def _get_submissions_by_user(user):
 
 
 def _submissions_post():
-    study_id = request.form.get('study')
-    user = request.form.get('user')
-
-    success = True
-    if not study_id or not isinstance(study_id, unicode):
-        success = False
-        invalid_param = "study_id"
-        invalid_value = study_id
-    elif not user or not isinstance(user, unicode):
-        success = False
-        invalid_param = "user"
-        invalid_value = user
-
-    if not success:
+    params_to_validate = ['study_id', 'user']
+    try:
+        param_map = _validate_post_params_or_error(params_to_validate)
+    except InvalidParam as e:
         return {
             'success': False,
-            'message':
-            "{value} is an invalid value for the parameter {param}".format(
-                value=invalid_value, param=invalid_param)
+            'message': str(e)
         }
 
+    # Param validaiton successful
     try:
-        study = Study.objects.get(id=ObjectId(study_id))
-        submission = Submission(study=study, user=user).save()
+        study = Study.objects.get(id=ObjectId(param_map['study_id']))
+        submission = Submission(study=study, user=param_map['user']).save()
     except (NotUniqueError, ValidationError) as e:
         return {
             'success': False,
