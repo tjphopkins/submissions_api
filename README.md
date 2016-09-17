@@ -1,16 +1,16 @@
 # Studies and submissions Flask API
 
-## Get up and running:
+## Install
 
-Inside a python2 environment, pip install the following packages:
-* flask
-* flask-mongoengine
-* mock
+pip install -r requirements.txt
+
+## Run
 
 From the top-level submissions_api directory, run 'python runserver.py'.
-The localhost port on which the Flask dev server is running will be printed.
+Notw the localhost port on which the Flask dev server is running printed to the
+terminal.
 
-## Use cases
+## Use Cases
 
 * List all studies:
 `curl http://localhost:5000/studies`
@@ -26,6 +26,3 @@ The localhost port on which the Flask dev server is running will be printed.
 
 * Create new submission
 `curl --data "study=:study_id&user:user_id" http://localhost:5000/submissions`
-
-**NOTE**: All endpoints will use the http protocol, not https, since the app does
-not use SSL.
