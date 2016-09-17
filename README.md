@@ -2,13 +2,16 @@
 
 ## Install
 
-pip install -r requirements.txt
+`pip install -r requirements.txt`
 
 ## Run
 
-From the top-level submissions_api directory, run 'python runserver.py'.
+From the top-level submissions_api directory, run `python runserver.py`.
 Notw the localhost port on which the Flask dev server is running printed to the
 terminal.
+
+## Run tests
+From the top-level submissions_api directory, run `python tests.py`.
 
 ## Use Cases
 
@@ -26,3 +29,8 @@ terminal.
 
 * Create new submission
 `curl --data "study=:study_id&user:user_id" http://localhost:5000/submissions`
+
+## Next steps for development
+
+* Write integration tests for api endpoints
+* Write User model
