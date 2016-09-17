@@ -22,7 +22,7 @@ terminal.
 `curl --data "name=study_name&available_places=30&user=user_id" http://localhost:5000/studies`
 
 * List all submissions by user:
-`curl http://localhost:5000/studies?user=user_id`
+`curl http://localhost:5000/submissions?user=user_id`
 
 * Create new submission
 `curl --data "study=:study_id&user:user_id" http://localhost:5000/submissions`
