@@ -93,7 +93,7 @@ def studies():
     user = request.args.get('user')
     studies = _get_studies(user=user)
 
-    return json.dumps(studies)
+    return studies
 
 
 def _submission_conversion_to_dict(submission):
@@ -129,33 +129,33 @@ def submissions():
             invalid_value = user
 
         if not success:
-            return json.dumps({
+            return {
                 'success': False,
                 'message':
                 "{value} is an invalid value for the parameter {param}".format(
                     value=invalid_value, param=invalid_param)
-            })
+            }
 
         try:
             study = Study.objects.get(id=ObjectId(study_id))
             submission = Submission(study=study, user=user).save()
         except (NotUniqueError, ValidationError) as e:
-            return json.dumps({
+            return {
                 'success': False,
                 'message': str(e)
-            })
+            }
         else:
-            return json.dumps({
+            return {
                 'success': True,
                 'submission': _submission_conversion_to_dict(submission)
-            })
+            }
 
     user = request.args.get('user')
     if not user:
-        return json.dumps({
+        return{
             'success': False,
             'message': "Must supply value user_id"
-        })
+        }
     studies = _get_submissions_by_user(user)
 
     return studies
