@@ -12,6 +12,7 @@ from submissions_api.documents import Study, Submission
 class SubmissionsTestCase(unittest.TestCase):
 
     def setUp(self):
+        # Set up testing DB
         app.config['MONGODB_SETTINGS'] = {'DB': "testing"}
         app.config['TESTING'] = True
         app.config['LOGIN_DISABLED'] = True
@@ -24,6 +25,10 @@ class SubmissionsTestCase(unittest.TestCase):
         self.app_context = app.app_context()
         self.app_context.push()
 
+        # Clear out collections in the testing DB
+        Study.drop_collection()
+        Submission.drop_collection()
+
         self.study = Study(
             name='Study 1', available_places=2, user='user_1').save()
         study = Study.objects.get(id=self.study.id)
@@ -32,9 +37,6 @@ class SubmissionsTestCase(unittest.TestCase):
 
     def tearDown(self):
         self.app_context.pop()
-
-        Study.drop_collection()
-        Submission.drop_collection()
 
     def test_duplicate_study_name_errors(self):
         with self.assertRaises(NotUniqueError):
