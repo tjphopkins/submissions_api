@@ -13,6 +13,7 @@ def index():
 
 
 def jsonify_response(fn):
+    """To be used as a decorator for converting endpoint response to json."""
     @wraps(fn)
     def fn_wrapper(*args, **kwargs):
         return json.dumps(fn(*args, **kwargs))
@@ -47,12 +48,27 @@ class InvalidParam(Exception):
 
 
 def _get_and_validate_unicode_post_param(param_name):
+    """Retrieves parameter from POST request and validates that it is a non-empty
+    string.
+
+    :arg param_name - str
+    :return tuple containing:
+        * valid - bool, indicating whether or not validaiton was successful
+        * param_val - unicode, value retrieved from GET request
+        * param_name - str, function argument
+    """
     param_val = request.form.get(param_name)
-    valid = param_val and isinstance(param_val, unicode)
+    valid = isinstance(param_val, unicode) and param_val
     return valid, param_val, param_name
 
 
 def _validate_post_params_or_error(param_names):
+    """Given a list of paramaters, retrieves their values from POST request,
+    validates them and returns a dict mapping params to values.
+
+    :arg param_names - list(str)
+    :return param_map - dict, maps params to values
+    """
     validation_results = [_get_and_validate_unicode_post_param(param) for param
                           in param_names]
     param_map = {}
@@ -65,6 +81,16 @@ def _validate_post_params_or_error(param_names):
 
 
 def _studies_post():
+    """Handles studies POST request.
+
+    POST params:
+    * name - required, name of study to create
+    * user - required, id of user creating the study
+    * available_places - required, number of submissions allowed for this study
+
+    :return dict containing success information and the created study if
+    was successful.
+    """
     params_to_validate = ['name', 'available_places', 'user']
     try:
         param_map = _validate_post_params_or_error(params_to_validate)
@@ -96,13 +122,23 @@ def _studies_post():
 @app.route('/studies', methods=['GET', 'POST'])
 @jsonify_response
 def studies():
+    """
+    Studies endpoint. Handles:
+        * GET request to retrieve studies with optional user filter
+            :return - dict containing success information and list of
+                      studies if successful
+        * POST request to create new study - see _studies_post method
+    """
     if request.method == 'POST':
         return _studies_post()
 
     user = request.args.get('user')
     studies = _get_studies(user=user)
 
-    return studies
+    return {
+        'success': True,
+        'studies': studies
+    }
 
 
 def _submission_conversion_to_dict(submission):
@@ -121,6 +157,15 @@ def _get_submissions_by_user(user):
 
 
 def _submissions_post():
+    """Handles submissions POST request.
+
+    POST params:
+    * study_id - required
+    * user - required
+
+    :return dict containing success information and the created submission if
+    was successful.
+    """
     params_to_validate = ['study_id', 'user']
     try:
         param_map = _validate_post_params_or_error(params_to_validate)
@@ -149,15 +194,25 @@ def _submissions_post():
 @app.route('/submissions', methods=['GET', 'POST'])
 @jsonify_response
 def submissions():
+    """
+    Submissions endpoint. Handles:
+        * GET request to retrieve submissions with optional user filter:
+            :return - dict containing success information and list of
+                      submissions if successful
+        * POST request to create new submission (see _submissions_post method)
+    """
     if request.method == 'POST':
         _submissions_post()
 
     user = request.args.get('user')
     if not user:
-        return{
+        return {
             'success': False,
             'message': "Must supply valid user_id"
         }
-    studies = _get_submissions_by_user(user)
+    submissions = _get_submissions_by_user(user)
 
-    return studies
+    return {
+        'success': True,
+        'submissions': submissions
+    }

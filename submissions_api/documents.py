@@ -6,12 +6,14 @@ from submissions_api import db
 
 
 class Study(db.Document):
+    """Model for Study documents."""
     name = db.StringField(required=True)
     available_places = db.IntField(required=True)
     user = db.StringField(required=True)
 
     meta = {
         'indexes': [
+            # No duplicate study name
             {
                 'fields': ['name'],
                 'unique': True
@@ -29,6 +31,7 @@ def _get_study_submissions_count(study):
 
 
 class Submission(db.Document):
+    """Model for Submission documents."""
     study = db.ReferenceField('Study', required=True)
     user = db.StringField(required=True)
     created_at = db.DateTimeField(default=datetime.now())
@@ -36,6 +39,7 @@ class Submission(db.Document):
 
     meta = {
         'indexes': [
+            # Allow only one submission per study per user
             {
                 'fields': ['study', 'user'],
                 'unique': True
