@@ -48,27 +48,47 @@ class SubmissionsTestCase(unittest.TestCase):
         def mock_now():
             return datetime(2016, 1, 1)
         with patch.object(field, 'default', new=mock_now()):
-            submission = Submission(study=self.study, user='user_2').save()
+            submission = Submission.create_new(self.study.id, 'user_2')
 
         submission = Submission.objects.get(id=submission.id)
         self.assertEqual(submission.study, self.study)
         self.assertEqual(submission.user, 'user_2')
         self.assertEqual(submission.created_at, datetime(2016, 1, 1))
+        self.assertEqual(submission.study_submission_number, 0)
 
     def test_no_duplicate_user_on_study(self):
-        Submission(study=self.study, user='user_2').save()
+        Submission.create_new(self.study.id, 'user_2')
         with self.assertRaises(NotUniqueError):
-            Submission(study=self.study, user='user_2').save()
+            Submission.create_new(self.study.id, 'user_2').save()
 
     def test_no_more_than_available_places_submissions(self):
-        Submission(study=self.study, user='user_2').save()
-        Submission(study=self.study, user='user_3').save()
+        Submission.create_new(self.study.id, 'user_2')
+        Submission.create_new(self.study.id, 'user_3')
         with self.assertRaises(ValidationError) as e:
-            Submission(study=self.study, user='user_4').save()
+            Submission.create_new(self.study.id, 'user_4')
 
         self.assertEqual(
             str(e.exception),
             "A maximum of 2 submissions allowed for the Study 1")
+
+    def test_concurrent_new_study_submission(self):
+        submission_0 = Submission.create_new(self.study.id, 'user_1')
+        self.assertEqual(submission_0.study_submission_number, 0)
+
+        # Trick into thinking there are no submissions for this study
+        # first time around, and then let it proceed as normal on the retry
+        count_patcher = patch(
+            'submissions_api.documents._get_study_submissions_count')
+        mock_count = count_patcher.start()
+
+        def return_0(*a, **k):
+            count_patcher.stop()
+            return 0
+
+        mock_count.side_effect = return_0
+
+        submission = Submission.create_new(self.study.id, 'user_2')
+        self.assertEqual(submission.study_submission_number, 1)
 
 
 if __name__ == '__main__':

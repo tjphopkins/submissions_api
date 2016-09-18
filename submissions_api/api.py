@@ -1,6 +1,5 @@
 from flask import request
 import json
-from bson import ObjectId
 from mongoengine import NotUniqueError, ValidationError
 from functools import wraps
 
@@ -78,7 +77,7 @@ def _studies_post():
     # Param validaiton successful
     try:
         study = Study(
-            name=param_map['study_name'],
+            name=param_map['name'],
             available_places=int(param_map['available_places']),
             user=param_map['user']).\
             save()
@@ -131,10 +130,10 @@ def _submissions_post():
             'message': str(e)
         }
 
-    # Param validaiton successful
+    # Param validation successful
     try:
-        study = Study.objects.get(id=ObjectId(param_map['study_id']))
-        submission = Submission(study=study, user=param_map['user']).save()
+        submission = Submission.create_new(
+            param_map['study_id'], param_map['user'])
     except (NotUniqueError, ValidationError) as e:
         return {
             'success': False,
@@ -157,7 +156,7 @@ def submissions():
     if not user:
         return{
             'success': False,
-            'message': "Must supply value user_id"
+            'message': "Must supply valid user_id"
         }
     studies = _get_submissions_by_user(user)
 
